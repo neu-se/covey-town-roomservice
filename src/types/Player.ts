@@ -37,3 +37,5 @@ export default class Player {
     this.location = location;
   }
 }
+
+export type ServerPlayer = { _id: string, _userName: string, location: UserLocation };
