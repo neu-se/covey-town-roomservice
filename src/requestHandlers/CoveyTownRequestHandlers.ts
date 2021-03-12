@@ -203,13 +203,5 @@ export function townSubscriptionHandler(socket: Socket): void {
     return;
   }
   // Retrieve our metadata about this player from the TownController
-  const session = townController.getSessionByToken(token);
-  if (!session) {
-    socket.disconnect(true);
-    return;
-  } else {
-    // Create an adapter that will translate events from the CoveyTownController into
-    // events that the socket protocol knows about
-    townController.connect(socket, session);
-  }
+  townController.connect(socket, token);
 }

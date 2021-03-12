@@ -164,22 +164,28 @@ export default class CoveyTownController {
     this._listeners.forEach(listener => listener.onTownDestroyed());
   }
 
-  connect(socket: Socket, sessionToken: PlayerSession) {
-    const listener = townSocketAdapter(socket);
-    this.addTownListener(listener);
+  connect(socket: Socket, sessionToken: string) {
+    const session = this._sessions.find(p => p.sessionToken === sessionToken);
+    if (!session) {
+      socket.disconnect(true);
+      return;
+    } else {
+      const listener = townSocketAdapter(socket);
+      this.addTownListener(listener);
 
-    // Register an event listener for the client socket: if the client disconnects,
-    // clean up our listener adapter, and then let the CoveyTownController know that the
-    // player's session is disconnected
-    socket.on('disconnect', () => {
-      this.onDisconnect(listener, sessionToken);
-    });
+      // Register an event listener for the client socket: if the client disconnects,
+      // clean up our listener adapter, and then let the CoveyTownController know that the
+      // player's session is disconnected
+      socket.on('disconnect', () => {
+        this.onDisconnect(listener, session);
+      });
 
-    // Register an event listener for the client socket: if the client updates their
-    // location, inform the CoveyTownController
-    socket.on('playerMovement', (movementData: UserLocation) => {
-      this.onPlayerMovement(sessionToken.player, movementData);
-    });
+      // Register an event listener for the client socket: if the client updates their
+      // location, inform the CoveyTownController
+      socket.on('playerMovement', (movementData: UserLocation) => {
+        this.onPlayerMovement(session.player, movementData);
+      });
+    }
   }
 
   private onDisconnect(listener: CoveyTownListener, sessionToken: PlayerSession) {
