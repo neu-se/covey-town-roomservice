@@ -212,9 +212,9 @@ export function townSubscriptionHandler(socket: Socket): void {
   }
 
   // Retrieve our metadata about this player from the TownController
-  const s = townController.getSessionByToken(token);
+  const session = townController.getSessionByToken(token);
 
-  if (!s) {
+  if (!session) {
     socket.disconnect(true);
   } else {
     // Create an adapter that will translate events from the CoveyTownController into
@@ -227,13 +227,13 @@ export function townSubscriptionHandler(socket: Socket): void {
     // player's session is disconnected
     socket.on('disconnect', () => {
       townController.removeTownListener(listener);
-      townController.destroySession(s);
+      townController.destroySession(session);
     });
 
     // Register an event listener for the client socket: if the client updates their
     // location, inform the CoveyTownController
     socket.on('playerMovement', (movementData: UserLocation) => {
-      townController.updatePlayerLocation(s.player, movementData);
+      townController.updatePlayerLocation(session.player, movementData);
     });
   }
 }
