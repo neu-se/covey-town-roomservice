@@ -184,12 +184,13 @@ export default class CoveyTownController {
       const listener = townSocketAdapter(socket);
       this.addTownListener(listener);
 
+      
+
       // Register an event listener for the client socket: if the client disconnects,
       // clean up our listener adapter, and then let the CoveyTownController know that the
       // player's session is disconnected
       socket.on('disconnect', () => {
-        this.removeTownListener(listener);
-        this.destroySession(session);
+        this.onDisconnect(listener, session);
       });
 
       // Register an event listener for the client socket: if the client updates their
@@ -200,6 +201,10 @@ export default class CoveyTownController {
     }
   }
 
+  private onDisconnect(listener: CoveyTownListener, session: PlayerSession) {
+    this.removeTownListener(listener);
+    this.destroySession(session);
+  }
   /**
    * An adapter between CoveyTownController's event interface (CoveyTownListener)
    * and the low-level network communication protocol
