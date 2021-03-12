@@ -228,8 +228,8 @@ export function townSubscriptionHandler(socket: Socket): void {
   }
 
   // Retrieve our metadata about this player from the TownController
-  const s = townController?.getSessionByToken(token);
-  if (!s) {
+  const session = townController?.getSessionByToken(token);
+  if (!session) {
     // No valid session exists for this token, hence this client's connection should be terminated
     socket.disconnect(true);
   } else {
@@ -243,13 +243,13 @@ export function townSubscriptionHandler(socket: Socket): void {
     // player's session is disconnected
     socket.on('disconnect', () => {
       townController.removeTownListener(listener);
-      townController.destroySession(s);
+      townController.destroySession(session);
     });
 
     // Register an event listener for the client socket: if the client updates their
     // location, inform the CoveyTownController
     socket.on('playerMovement', (movementData: UserLocation) => {
-      townController.updatePlayerLocation(s.player, movementData);
+      townController.updatePlayerLocation(session.player, movementData);
     });
   }
 }
