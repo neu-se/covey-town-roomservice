@@ -150,22 +150,12 @@ export default class CoveyTownController {
     this._listeners = this._listeners.filter(v => v !== listener);
   }
 
-  /**
-   * Fetch a player's session based on the provided session token. Returns undefined if the
-   * session token is not valid.
-   *
-   * @param token
-   */
-  getSessionByToken(token: string): PlayerSession | undefined {
-    return this._sessions.find(p => p.sessionToken === token);
-  }
-
   disconnectAllPlayers(): void {
     this._listeners.forEach(listener => listener.onTownDestroyed());
   }
 
   connect(sessionToken: string, socket: Socket) {
-    const session = this.getSessionByToken(sessionToken);
+    const session = this._sessions.find(p => p.sessionToken === sessionToken);
     if (!session) {
       // No valid session exists for this token, hence this client's connection should be terminated
       socket.disconnect(true);
