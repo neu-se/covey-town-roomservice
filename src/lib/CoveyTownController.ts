@@ -128,7 +128,7 @@ export default class CoveyTownController {
    * @param player Player to update location for
    * @param location New location for this player
    */
-  updatePlayerLocation(player: Player, location: UserLocation): void {
+  private onPlayerMovement(player: Player, location: UserLocation): void {
     player.updateLocation(location);
     this._listeners.forEach((listener) => listener.onPlayerMoved(player));
   }
@@ -191,7 +191,7 @@ export default class CoveyTownController {
       // Register an event listener for the client socket: if the client updates their
       // location, inform the CoveyTownController
       socket.on('playerMovement', (movementData: UserLocation) => {
-        this.updatePlayerLocation(session.player, movementData);
+        this.onPlayerMovement(session.player, movementData);
       });
     }
   }
