@@ -1,11 +1,15 @@
 import { customAlphabet, nanoid } from 'nanoid';
+import { Socket } from 'socket.io';
 import { UserLocation } from '../CoveyTypes';
 import CoveyTownListener from '../types/CoveyTownListener';
 import Player from '../types/Player';
 import PlayerSession from '../types/PlayerSession';
 import TwilioVideo from './TwilioVideo';
 import IVideoClient from './IVideoClient';
+// eslint-disable-next-line import/no-cycle
 import { passwordMatches } from './CoveyTownsStore';
+// eslint-disable-next-line import/no-cycle
+import { townSocketAdapter } from '../requestHandlers/CoveyTownRequestHandlers';
 
 const friendlyNanoID = customAlphabet('1234567890ABCDEF', 8);
 
@@ -111,6 +115,7 @@ export default class CoveyTownController {
     }
     return result;
   }
+
   /**
    * Destroys all data related to a player in this town.
    *
@@ -164,5 +169,24 @@ export default class CoveyTownController {
 
   disconnectAllPlayers(): void {
     this._listeners.forEach((listener) => listener.onTownDestroyed());
+  }
+
+  connect(socket: Socket,  session: PlayerSession) {
+    const listener = townSocketAdapter(socket);
+    this.addTownListener(listener);
+  
+    // Register an event listener for the client socket: if the client disconnects,
+    // clean up our listener adapter, and then let the CoveyTownController know that the
+    // player's session is disconnected
+    socket.on('disconnect', () => {
+      this.removeTownListener(listener);
+      this.destroySession(session);
+    });
+  
+    // Register an event listener for the client socket: if the client updates their
+    // location, inform the CoveyTownController
+    socket.on('playerMovement', (movementData: UserLocation) => {
+      this.updatePlayerLocation(session.player, movementData);
+    });
   }
 }
