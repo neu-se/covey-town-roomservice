@@ -121,17 +121,6 @@ export default class CoveyTownController {
   }
 
   /**
-   * Destroys all data related to a player in this town.
-   *
-   * @param session PlayerSession to destroy
-   */
-  destroySession(session: PlayerSession): void {
-    this._players = this._players.filter(p => p.id !== session.player.id);
-    this._sessions = this._sessions.filter(s => s.sessionToken !== session.sessionToken);
-    this._listeners.forEach(listener => listener.onPlayerDisconnected(session.player));
-  }
-
-  /**
    * Updates the location of a player within the town
    * @param player Player to update location for
    * @param location New location for this player
@@ -190,10 +179,7 @@ export default class CoveyTownController {
       // Register an event listener for the client socket: if the client disconnects,
       // clean up our listener adapter, and then let the CoveyTownController know that the
       // player's session is disconnected
-      socket.on('disconnect', () => {
-        this.removeTownListener(listener);
-        this.destroySession(session);
-      });
+      this.onDisconnect(socket, listener, session);
 
       // Register an event listener for the client socket: if the client updates their
       // location, inform the CoveyTownController
@@ -201,6 +187,16 @@ export default class CoveyTownController {
         this.onPlayerMovement(session.player, movementData);
       });
     }
+  }
+
+  private onDisconnect(socket: Socket, listener: CoveyTownListener, session: PlayerSession) {
+    socket.on('disconnect', () => {
+      this.removeTownListener(listener);
+      this._players = this._players.filter(p => p.id !== session.player.id);
+      this._sessions = this._sessions.filter(s => s.sessionToken !== session.sessionToken);
+      // eslint-disable-next-line @typescript-eslint/no-shadow
+      this._listeners.forEach(listener => listener.onPlayerDisconnected(session.player));
+    });
   }
 }
 
