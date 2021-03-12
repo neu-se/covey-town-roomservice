@@ -1,4 +1,5 @@
 import { customAlphabet, nanoid } from 'nanoid';
+import { Socket } from 'socket.io';
 import { UserLocation } from '../CoveyTypes';
 import CoveyTownListener from '../types/CoveyTownListener';
 import Player from '../types/Player';
@@ -86,15 +87,22 @@ export default class CoveyTownController {
     this._players.push(newPlayer);
 
     // Create a video token for this user to join this town
-    theSession.videoToken = await this._videoClient.getTokenForTown(this._coveyTownID, newPlayer.id);
+    theSession.videoToken = await this._videoClient.getTokenForTown(
+      this._coveyTownID,
+      newPlayer.id,
+    );
 
     // Notify other players that this player has joined
-    this._listeners.forEach((listener) => listener.onPlayerJoined(newPlayer));
+    this._listeners.forEach(listener => listener.onPlayerJoined(newPlayer));
 
     return theSession;
   }
 
-  update(coveyTownPassword: string, friendlyName: string | undefined, makePublic: boolean | undefined) {
+  update(
+    coveyTownPassword: string,
+    friendlyName: string | undefined,
+    makePublic: boolean | undefined,
+  ) {
     let result = false;
     if (passwordMatches(coveyTownPassword, this.townUpdatePassword)) {
       result = true;
@@ -111,15 +119,36 @@ export default class CoveyTownController {
     }
     return result;
   }
+
+  connect(sessionToken: string, socket: Socket): void {
+    const session = this.getSessionByToken(sessionToken);
+    const listener = townSocketAdapter(socket);
+    addTownListener(listener);
+
+    // Register an event listener for the client socket: if the client disconnects,
+    // clean up our listener adapter, and then let the CoveyTownController know that the
+    // player's session is disconnected
+    socket.on('disconnect', () => {
+      this.removeTownListener(listener);
+      destroySession(session);
+    });
+
+    // Register an event listener for the client socket: if the client updates their
+    // location, inform the CoveyTownController
+    socket.on('playerMovement', (movementData: UserLocation) => {
+      updatePlayerLocation(session.player, movementData);
+    });
+  }
+
   /**
    * Destroys all data related to a player in this town.
    *
    * @param session PlayerSession to destroy
    */
   destroySession(session: PlayerSession): void {
-    this._players = this._players.filter((p) => p.id !== session.player.id);
-    this._sessions = this._sessions.filter((s) => s.sessionToken !== session.sessionToken);
-    this._listeners.forEach((listener) => listener.onPlayerDisconnected(session.player));
+    this._players = this._players.filter(p => p.id !== session.player.id);
+    this._sessions = this._sessions.filter(s => s.sessionToken !== session.sessionToken);
+    this._listeners.forEach(listener => listener.onPlayerDisconnected(session.player));
   }
 
   /**
@@ -129,7 +158,7 @@ export default class CoveyTownController {
    */
   updatePlayerLocation(player: Player, location: UserLocation): void {
     player.updateLocation(location);
-    this._listeners.forEach((listener) => listener.onPlayerMoved(player));
+    this._listeners.forEach(listener => listener.onPlayerMoved(player));
   }
 
   /**
@@ -149,7 +178,7 @@ export default class CoveyTownController {
    * with addTownListener, or otherwise will be a no-op
    */
   removeTownListener(listener: CoveyTownListener): void {
-    this._listeners = this._listeners.filter((v) => v !== listener);
+    this._listeners = this._listeners.filter(v => v !== listener);
   }
 
   /**
@@ -159,10 +188,10 @@ export default class CoveyTownController {
    * @param token
    */
   getSessionByToken(token: string): PlayerSession | undefined {
-    return this._sessions.find((p) => p.sessionToken === token);
+    return this._sessions.find(p => p.sessionToken === token);
   }
 
   disconnectAllPlayers(): void {
-    this._listeners.forEach((listener) => listener.onTownDestroyed());
+    this._listeners.forEach(listener => listener.onTownDestroyed());
   }
 }

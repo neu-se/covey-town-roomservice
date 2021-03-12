@@ -4,6 +4,8 @@ import Player from '../types/Player';
 import { CoveyTownList, UserLocation } from '../CoveyTypes';
 import CoveyTownListener from '../types/CoveyTownListener';
 import CoveyTownsStore from '../lib/CoveyTownsStore';
+import CoveyTownController from '../lib/CoveyTownController';
+import PlayerSession from '../types/PlayerSession';
 
 /**
  * The format of a request to join a Town in Covey.Town, as dispatched by the server middleware
@@ -96,7 +98,9 @@ export interface ResponseEnvelope<T> {
  *
  * @param requestData an object representing the player's request
  */
-export async function townJoinHandler(requestData: TownJoinRequest): Promise<ResponseEnvelope<TownJoinResponse>> {
+export async function townJoinHandler(
+  requestData: TownJoinRequest,
+): Promise<ResponseEnvelope<TownJoinResponse>> {
   const townsStore = CoveyTownsStore.getInstance();
 
   const coveyTownController = townsStore.getControllerForTown(requestData.coveyTownID);
@@ -130,7 +134,9 @@ export async function townListHandler(): Promise<ResponseEnvelope<TownListRespon
   };
 }
 
-export async function townCreateHandler(requestData: TownCreateRequest): Promise<ResponseEnvelope<TownCreateResponse>> {
+export async function townCreateHandler(
+  requestData: TownCreateRequest,
+): Promise<ResponseEnvelope<TownCreateResponse>> {
   const townsStore = CoveyTownsStore.getInstance();
   if (requestData.friendlyName.length === 0) {
     return {
@@ -148,25 +154,65 @@ export async function townCreateHandler(requestData: TownCreateRequest): Promise
   };
 }
 
-export async function townDeleteHandler(requestData: TownDeleteRequest): Promise<ResponseEnvelope<Record<string, null>>> {
+export async function townDeleteHandler(
+  requestData: TownDeleteRequest,
+): Promise<ResponseEnvelope<Record<string, null>>> {
   const townsStore = CoveyTownsStore.getInstance();
   const success = townsStore.deleteTown(requestData.coveyTownID, requestData.coveyTownPassword);
   return {
     isOK: success,
     response: {},
-    message: !success ? 'Invalid password. Please double check your town update password.' : undefined,
+    message: !success
+      ? 'Invalid password. Please double check your town update password.'
+      : undefined,
   };
 }
 
-export async function townUpdateHandler(requestData: TownUpdateRequest): Promise<ResponseEnvelope<Record<string, null>>> {
+export async function townUpdateHandler(
+  requestData: TownUpdateRequest,
+): Promise<ResponseEnvelope<Record<string, null>>> {
   const townsStore = CoveyTownsStore.getInstance();
-  const success = townsStore.updateTown(requestData.coveyTownID, requestData.coveyTownPassword, requestData.friendlyName, requestData.isPubliclyListed);
+  const success = townsStore.updateTown(
+    requestData.coveyTownID,
+    requestData.coveyTownPassword,
+    requestData.friendlyName,
+    requestData.isPubliclyListed,
+  );
   return {
     isOK: success,
     response: {},
-    message: !success ? 'Invalid password or update values specified. Please double check your town update password.' : undefined,
+    message: !success
+      ? 'Invalid password or update values specified. Please double check your town update password.'
+      : undefined,
+  };
+}
+
+/**
+ * A handler to process a remote player's subscription to updates for a town
+ *
+ * @param socket the Socket object that we will use to communicate with the player
+ */
+export function townSubscriptionHandler(socket: Socket): void {
+  // Parse the client's session token from the connection
+  // For each player, the session token should be the same string returned by joinTownHandler
+  const { token: sessionToken, coveyTownID } = socket.handshake.auth as {
+    token: string;
+    coveyTownID: string;
   };
 
+  const townController = CoveyTownsStore.getInstance().getControllerForTown(coveyTownID);
+
+  // Retrieve our metadata about this player from the TownController
+  if (!townController) {
+    socket.disconnect(true);
+    return;
+  }
+  const session = townController.getSessionByToken(sessionToken);
+  if (!session) {
+    socket.disconnect(true);
+  } else {
+    townController.connect(sessionToken, socket);
+  }
 }
 
 /**
@@ -191,45 +237,4 @@ function townSocketAdapter(socket: Socket): CoveyTownListener {
       socket.disconnect(true);
     },
   };
-}
-
-/**
- * A handler to process a remote player's subscription to updates for a town
- *
- * @param socket the Socket object that we will use to communicate with the player
- */
-export function townSubscriptionHandler(socket: Socket): void {
-  // Parse the client's session token from the connection
-  // For each player, the session token should be the same string returned by joinTownHandler
-  const { token, coveyTownID } = socket.handshake.auth as { token: string; coveyTownID: string };
-
-  const townController = CoveyTownsStore.getInstance()
-    .getControllerForTown(coveyTownID);
-
-  // Retrieve our metadata about this player from the TownController
-  const s = townController?.getSessionByToken(token);
-  if (!s || !townController) {
-    // No valid session exists for this token, hence this client's connection should be terminated
-    socket.disconnect(true);
-    return;
-  }
-
-  // Create an adapter that will translate events from the CoveyTownController into
-  // events that the socket protocol knows about
-  const listener = townSocketAdapter(socket);
-  townController.addTownListener(listener);
-
-  // Register an event listener for the client socket: if the client disconnects,
-  // clean up our listener adapter, and then let the CoveyTownController know that the
-  // player's session is disconnected
-  socket.on('disconnect', () => {
-    townController.removeTownListener(listener);
-    townController.destroySession(s);
-  });
-
-  // Register an event listener for the client socket: if the client updates their
-  // location, inform the CoveyTownController
-  socket.on('playerMovement', (movementData: UserLocation) => {
-    townController.updatePlayerLocation(s.player, movementData);
-  });
 }
