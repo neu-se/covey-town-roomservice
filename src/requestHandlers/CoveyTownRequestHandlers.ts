@@ -170,29 +170,7 @@ export async function townUpdateHandler(requestData: TownUpdateRequest): Promise
 
 }
 
-/**
- * An adapter between CoveyTownController's event interface (CoveyTownListener)
- * and the low-level network communication protocol
- *
- * @param socket the Socket object that we will use to communicate with the player
- */
-function townSocketAdapter(socket: Socket): CoveyTownListener {
-  return {
-    onPlayerMoved(movedPlayer: Player) {
-      socket.emit('playerMoved', movedPlayer);
-    },
-    onPlayerDisconnected(removedPlayer: Player) {
-      socket.emit('playerDisconnect', removedPlayer);
-    },
-    onPlayerJoined(newPlayer: Player) {
-      socket.emit('newPlayer', newPlayer);
-    },
-    onTownDestroyed() {
-      socket.emit('townClosing');
-      socket.disconnect(true);
-    },
-  };
-}
+
 
 /**
  * A handler to process a remote player's subscription to updates for a town
@@ -212,34 +190,5 @@ export function townSubscriptionHandler(socket: Socket): void {
     return;
   }
   // Retrieve our metadata about this player from the TownController
-  connect(townController, token, socket);
+  townController.connect(token, socket);
 }
-
-function connect(townController: CoveyTownController, sessionToken: string, socket: Socket) {
-  const session = townController.getSessionByToken(sessionToken);
-  if (!session) {
-    // No valid session exists for this token, hence this client's connection should be terminated
-    socket.disconnect(true);
-  } else {
-
-    // Create an adapter that will translate events from the CoveyTownController into
-    // events that the socket protocol knows about
-    const listener = townSocketAdapter(socket);
-    townController.addTownListener(listener);
-
-    // Register an event listener for the client socket: if the client disconnects,
-    // clean up our listener adapter, and then let the CoveyTownController know that the
-    // player's session is disconnected
-    socket.on('disconnect', () => {
-      townController.removeTownListener(listener);
-      townController.destroySession(session);
-    });
-
-    // Register an event listener for the client socket: if the client updates their
-    // location, inform the CoveyTownController
-    socket.on('playerMovement', (movementData: UserLocation) => {
-      townController.updatePlayerLocation(session.player, movementData);
-    });
-  }
-}
-

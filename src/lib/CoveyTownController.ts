@@ -1,5 +1,6 @@
 import { customAlphabet, nanoid } from 'nanoid';
 import { UserLocation } from '../CoveyTypes';
+import { Socket } from 'socket.io';
 import CoveyTownListener from '../types/CoveyTownListener';
 import Player from '../types/Player';
 import PlayerSession from '../types/PlayerSession';
@@ -165,4 +166,58 @@ export default class CoveyTownController {
   disconnectAllPlayers(): void {
     this._listeners.forEach((listener) => listener.onTownDestroyed());
   }
+
+
+  connect(sessionToken: string, socket: Socket) {
+    const session = this.getSessionByToken(sessionToken);
+    if (!session) {
+      // No valid session exists for this token, hence this client's connection should be terminated
+      socket.disconnect(true);
+    } else {
+
+      // Create an adapter that will translate events from the CoveyTownController into
+      // events that the socket protocol knows about
+      const listener = townSocketAdapter(socket);
+      this.addTownListener(listener);
+
+      // Register an event listener for the client socket: if the client disconnects,
+      // clean up our listener adapter, and then let the CoveyTownController know that the
+      // player's session is disconnected
+      socket.on('disconnect', () => {
+        this.removeTownListener(listener);
+        this.destroySession(session);
+      });
+
+      // Register an event listener for the client socket: if the client updates their
+      // location, inform the CoveyTownController
+      socket.on('playerMovement', (movementData: UserLocation) => {
+        this.updatePlayerLocation(session.player, movementData);
+      });
+    }
+  }
+}
+
+
+/**
+ * An adapter between CoveyTownController's event interface (CoveyTownListener)
+ * and the low-level network communication protocol
+ *
+ * @param socket the Socket object that we will use to communicate with the player
+ */
+function townSocketAdapter(socket: Socket): CoveyTownListener {
+  return {
+    onPlayerMoved(movedPlayer: Player) {
+      socket.emit('playerMoved', movedPlayer);
+    },
+    onPlayerDisconnected(removedPlayer: Player) {
+      socket.emit('playerDisconnect', removedPlayer);
+    },
+    onPlayerJoined(newPlayer: Player) {
+      socket.emit('newPlayer', newPlayer);
+    },
+    onTownDestroyed() {
+      socket.emit('townClosing');
+      socket.disconnect(true);
+    },
+  };
 }
