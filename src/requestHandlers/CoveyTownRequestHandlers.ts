@@ -209,6 +209,25 @@ function townSocketAdapter(socket: Socket): CoveyTownListener {
   };
 }
 
+function connect() {
+  const listener = townSocketAdapter(socket);
+  townController.addTownListener(listener);
+
+  // Register an event listener for the client socket: if the client disconnects,
+  // clean up our listener adapter, and then let the CoveyTownController know that the
+  // player's session is disconnected
+  socket.on('disconnect', () => {
+    townController.removeTownListener(listener);
+    townController.destroySession(session);
+  });
+
+  // Register an event listener for the client socket: if the client updates their
+  // location, inform the CoveyTownController
+  socket.on('playerMovement', (movementData: UserLocation) => {
+    townController.updatePlayerLocation(session.player, movementData);
+  });
+}
+
 /**
  * A handler to process a remote player's subscription to updates for a town
  *
@@ -230,21 +249,6 @@ export function townSubscriptionHandler(socket: Socket): void {
   if (!session) {
     socket.disconnect(true);
   } else {
-    const listener = townSocketAdapter(socket);
-    townController.addTownListener(listener);
-
-    // Register an event listener for the client socket: if the client disconnects,
-    // clean up our listener adapter, and then let the CoveyTownController know that the
-    // player's session is disconnected
-    socket.on('disconnect', () => {
-      townController.removeTownListener(listener);
-      townController.destroySession(session);
-    });
-
-    // Register an event listener for the client socket: if the client updates their
-    // location, inform the CoveyTownController
-    socket.on('playerMovement', (movementData: UserLocation) => {
-      townController.updatePlayerLocation(session.player, movementData);
-    });
+    connect();
   }
 }
