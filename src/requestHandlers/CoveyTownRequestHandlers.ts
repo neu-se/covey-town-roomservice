@@ -206,18 +206,20 @@ export function townSubscriptionHandler(socket: Socket): void {
   const townController = CoveyTownsStore.getInstance()
     .getControllerForTown(coveyTownID);
 
+  if (!townController) {
+    socket.disconnect(true);
+    return;
+  }
+
   // Retrieve our metadata about this player from the TownController
-  const s = townController?.getSessionByToken(token);
+  const s = townController.getSessionByToken(token);
 
   if (!s) {
     socket.disconnect(true);
     return;
   }
 
-  if (!townController) {
-    socket.disconnect(true);
-    return;
-  }
+
   // Create an adapter that will translate events from the CoveyTownController into
   // events that the socket protocol knows about
   const listener = townSocketAdapter(socket);
