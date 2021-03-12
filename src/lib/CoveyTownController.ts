@@ -1,4 +1,5 @@
 import { customAlphabet, nanoid } from 'nanoid';
+import { Socket } from 'socket.io';
 import { UserLocation } from '../CoveyTypes';
 import CoveyTownListener from '../types/CoveyTownListener';
 import Player from '../types/Player';
@@ -117,6 +118,26 @@ export default class CoveyTownController {
       }
     }
     return result;
+  }
+
+  connect(sessionToken: string, socket: Socket): void {
+    const session = this.getSessionByToken(sessionToken);
+    const listener = townSocketAdapter(socket);
+    addTownListener(listener);
+
+    // Register an event listener for the client socket: if the client disconnects,
+    // clean up our listener adapter, and then let the CoveyTownController know that the
+    // player's session is disconnected
+    socket.on('disconnect', () => {
+      this.removeTownListener(listener);
+      destroySession(session);
+    });
+
+    // Register an event listener for the client socket: if the client updates their
+    // location, inform the CoveyTownController
+    socket.on('playerMovement', (movementData: UserLocation) => {
+      updatePlayerLocation(session.player, movementData);
+    });
   }
 
   /**
