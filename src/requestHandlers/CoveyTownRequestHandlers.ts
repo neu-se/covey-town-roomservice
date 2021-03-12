@@ -188,30 +188,6 @@ export async function townUpdateHandler(
 }
 
 /**
- * An adapter between CoveyTownController's event interface (CoveyTownListener)
- * and the low-level network communication protocol
- *
- * @param socket the Socket object that we will use to communicate with the player
- */
-function townSocketAdapter(socket: Socket): CoveyTownListener {
-  return {
-    onPlayerMoved(movedPlayer: Player) {
-      socket.emit('playerMoved', movedPlayer);
-    },
-    onPlayerDisconnected(removedPlayer: Player) {
-      socket.emit('playerDisconnect', removedPlayer);
-    },
-    onPlayerJoined(newPlayer: Player) {
-      socket.emit('newPlayer', newPlayer);
-    },
-    onTownDestroyed() {
-      socket.emit('townClosing');
-      socket.disconnect(true);
-    },
-  };
-}
-
-/**
  * A handler to process a remote player's subscription to updates for a town
  *
  * @param socket the Socket object that we will use to communicate with the player
@@ -234,25 +210,6 @@ export function townSubscriptionHandler(socket: Socket): void {
   } else {
     // Create an adapter that will translate events from the CoveyTownController into
     // events that the socket protocol knows about
-    connect(socket, townController, session);
+    townController.connect(socket, session);
   }
-}
-
-function connect(socket: Socket, townController: CoveyTownController, session: PlayerSession) {
-  const listener = townSocketAdapter(socket);
-  townController.addTownListener(listener);
-
-  // Register an event listener for the client socket: if the client disconnects,
-  // clean up our listener adapter, and then let the CoveyTownController know that the
-  // player's session is disconnected
-  socket.on('disconnect', () => {
-    townController.removeTownListener(listener);
-    townController.destroySession(session);
-  });
-
-  // Register an event listener for the client socket: if the client updates their
-  // location, inform the CoveyTownController
-  socket.on('playerMovement', (movementData: UserLocation) => {
-    townController.updatePlayerLocation(session.player, movementData);
-  });
 }
