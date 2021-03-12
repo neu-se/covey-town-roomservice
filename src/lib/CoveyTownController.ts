@@ -189,8 +189,7 @@ export default class CoveyTownController {
       // clean up our listener adapter, and then let the CoveyTownController know that the
       // player's session is disconnected
       socket.on('disconnect', () => {
-        this.removeTownListener(listener);
-        this.destroySession(session);
+        this.onDisconnect(listener, session);
       });
 
       // Register an event listener for the client socket: if the client updates their
@@ -199,6 +198,11 @@ export default class CoveyTownController {
         this.onPlayerMovement(session.player, movementData);
       });
     }
+  }
+
+  private onDisconnect(listener: CoveyTownListener, session: PlayerSession) {
+    this.removeTownListener(listener);
+    this.destroySession(session);
   }
 }
 
