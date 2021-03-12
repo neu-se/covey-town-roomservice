@@ -126,7 +126,7 @@ export async function townListHandler(): Promise<ResponseEnvelope<TownListRespon
   const townsStore = CoveyTownsStore.getInstance();
   return {
     isOK: true,
-    response: { towns: townsStore.getTowns() },
+    response: { towns: townsStore.getPublicTownListings() },
   };
 }
 

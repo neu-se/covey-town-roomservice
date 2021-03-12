@@ -167,7 +167,7 @@ describe('CoveyTownsStore', () => {
     it('Should include public towns', async () => {
       const town = createTownForTesting(undefined, true);
       const towns = CoveyTownsStore.getInstance()
-        .getTowns();
+        .getPublicTownListings();
       const entry = towns.filter(townInfo => townInfo.coveyTownID === town.coveyTownID);
       expect(entry.length)
         .toBe(1);
@@ -180,7 +180,7 @@ describe('CoveyTownsStore', () => {
       const town = createTownForTesting(undefined, true);
       const secondTown = createTownForTesting(town.friendlyName, true);
       const towns = CoveyTownsStore.getInstance()
-        .getTowns()
+        .getPublicTownListings()
         .filter(townInfo => townInfo.friendlyName === town.friendlyName);
       expect(towns.length)
         .toBe(2);
@@ -203,7 +203,7 @@ describe('CoveyTownsStore', () => {
     it('Should not include private towns', async () => {
       const town = createTownForTesting(undefined, false);
       const towns = CoveyTownsStore.getInstance()
-        .getTowns()
+        .getPublicTownListings()
         .filter(townInfo => townInfo.friendlyName === town.friendlyName || townInfo.coveyTownID === town.coveyTownID);
       expect(towns.length)
         .toBe(0);
@@ -212,7 +212,7 @@ describe('CoveyTownsStore', () => {
       const town = createTownForTesting(undefined, false);
       const town2 = createTownForTesting(town.friendlyName, true);
       const towns = CoveyTownsStore.getInstance()
-        .getTowns()
+        .getPublicTownListings()
         .filter(townInfo => townInfo.friendlyName === town.friendlyName || townInfo.coveyTownID === town.coveyTownID);
       expect(towns.length)
         .toBe(1);
@@ -224,7 +224,7 @@ describe('CoveyTownsStore', () => {
     it('Should not include deleted towns', async () => {
       const town = createTownForTesting(undefined, true);
       const towns = CoveyTownsStore.getInstance()
-        .getTowns()
+        .getPublicTownListings()
         .filter(townInfo => townInfo.friendlyName === town.friendlyName || townInfo.coveyTownID === town.coveyTownID);
       expect(towns.length)
         .toBe(1);
@@ -233,7 +233,7 @@ describe('CoveyTownsStore', () => {
       expect(res)
         .toBe(true);
       const townsPostDelete = CoveyTownsStore.getInstance()
-        .getTowns()
+        .getPublicTownListings()
         .filter(townInfo => townInfo.friendlyName === town.friendlyName || townInfo.coveyTownID === town.coveyTownID);
       expect(townsPostDelete.length)
         .toBe(0);

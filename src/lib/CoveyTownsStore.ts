@@ -27,7 +27,7 @@ export default class CoveyTownsStore {
     return this._towns.find(town => town.coveyTownID === coveyTownID);
   }
 
-  getTowns(): CoveyTownList {
+  getPublicTownListings(): CoveyTownList {
     return this._towns.filter(townController => townController.isPubliclyListed)
       .map(townController => ({
         coveyTownID: townController.coveyTownID,
