@@ -214,6 +214,7 @@ export function townSubscriptionHandler(socket: Socket): void {
     return;
   }
 
+
   // Create an adapter that will translate events from the CoveyTownController into
   // events that the socket protocol knows about
   const listener = townSocketAdapter(socket);
@@ -230,6 +231,7 @@ export function townSubscriptionHandler(socket: Socket): void {
   // Register an event listener for the client socket: if the client updates their
   // location, inform the CoveyTownController
   socket.on('playerMovement', (movementData: UserLocation) => {
-    townController.updatePlayerLocation(s.player, movementData);
+    townController.updatePlayerLocation(session.player, movementData);
   });
+}
 }
