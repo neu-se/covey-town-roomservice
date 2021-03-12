@@ -192,6 +192,25 @@ function townSocketAdapter(socket: Socket): CoveyTownListener {
   };
 }
 
+function connect(socket: Socket, townController: CoveyTownController, session: PlayerSession) {
+  const listener = townSocketAdapter(socket);
+  townController.addTownListener(listener);
+
+  // Register an event listener for the client socket: if the client disconnects,
+  // clean up our listener adapter, and then let the CoveyTownController know that the
+  // player's session is disconnected
+  socket.on('disconnect', () => {
+    townController.removeTownListener(listener);
+    townController.destroySession(session);
+  });
+
+  // Register an event listener for the client socket: if the client updates their
+  // location, inform the CoveyTownController
+  socket.on('playerMovement', (movementData: UserLocation) => {
+    townController.updatePlayerLocation(session.player, movementData);
+  });
+}
+
 /**
  * A handler to process a remote player's subscription to updates for a town
  *
@@ -200,7 +219,7 @@ function townSocketAdapter(socket: Socket): CoveyTownListener {
 export function townSubscriptionHandler(socket: Socket): void {
   // Parse the client's session token from the connection
   // For each player, the session token should be the same string returned by joinTownHandler
-  const { token, coveyTownID } = socket.handshake.auth as { token: string; coveyTownID: string };
+  const { sessionToken, coveyTownID } = socket.handshake.auth as { sessionToken: string; coveyTownID: string };
 
   const townController = CoveyTownsStore.getInstance()
     .getControllerForTown(coveyTownID);
@@ -212,7 +231,7 @@ export function townSubscriptionHandler(socket: Socket): void {
   }
   
   // Retrieve our metadata about this player from the TownController
-  const session = townController.getSessionByToken(token);
+  const session = townController.getSessionByToken(sessionToken);
   if (!session ) {
     // No valid session exists for this token, hence this client's connection should be terminated
     socket.disconnect(true);
@@ -222,8 +241,6 @@ export function townSubscriptionHandler(socket: Socket): void {
     connect(socket, townController, session);
   }
 
-
-}
 
 }
 
