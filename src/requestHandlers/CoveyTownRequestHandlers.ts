@@ -4,6 +4,7 @@ import Player from '../types/Player';
 import { CoveyTownList, UserLocation } from '../CoveyTypes';
 import CoveyTownListener from '../types/CoveyTownListener';
 import CoveyTownsStore from '../lib/CoveyTownsStore';
+import CoveyTownController from "../lib/CoveyTownController";
 
 /**
  * The format of a request to join a Town in Covey.Town, as dispatched by the server middleware
@@ -193,25 +194,7 @@ function townSocketAdapter(socket: Socket): CoveyTownListener {
   };
 }
 
-/**
- * A handler to process a remote player's subscription to updates for a town
- *
- * @param socket the Socket object that we will use to communicate with the player
- */
-export function townSubscriptionHandler(socket: Socket): void {
-  // Parse the client's session token from the connection
-  // For each player, the session token should be the same string returned by joinTownHandler
-  const { token, coveyTownID } = socket.handshake.auth as { token: string; coveyTownID: string };
-
-  const townController = CoveyTownsStore.getInstance()
-    .getControllerForTown(coveyTownID);
-
-  if (!townController) {
-    socket.disconnect(true);
-    return;
-  }
-
-  // Retrieve our metadata about this player from the TownController
+function connect(townController: CoveyTownController, token: string, socket: Socket) {
   const session = townController.getSessionByToken(token);
 
   if (!session) {
@@ -236,4 +219,26 @@ export function townSubscriptionHandler(socket: Socket): void {
       townController.updatePlayerLocation(session.player, movementData);
     });
   }
+}
+
+/**
+ * A handler to process a remote player's subscription to updates for a town
+ *
+ * @param socket the Socket object that we will use to communicate with the player
+ */
+export function townSubscriptionHandler(socket: Socket): void {
+  // Parse the client's session token from the connection
+  // For each player, the session token should be the same string returned by joinTownHandler
+  const { token, coveyTownID } = socket.handshake.auth as { token: string; coveyTownID: string };
+
+  const townController = CoveyTownsStore.getInstance()
+    .getControllerForTown(coveyTownID);
+
+  if (!townController) {
+    socket.disconnect(true);
+    return;
+  }
+
+  // Retrieve our metadata about this player from the TownController
+  connect(townController, token, socket);
 }
