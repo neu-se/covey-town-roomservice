@@ -4,6 +4,7 @@ import Player from '../types/Player';
 import { CoveyTownList, UserLocation } from '../CoveyTypes';
 import CoveyTownListener from '../types/CoveyTownListener';
 import CoveyTownsStore from '../lib/CoveyTownsStore';
+import CoveyTownController from '../lib/CoveyTownController';
 
 /**
  * The format of a request to join a Town in Covey.Town, as dispatched by the server middleware
@@ -211,6 +212,10 @@ export function townSubscriptionHandler(socket: Socket): void {
     return;
   }
   // Retrieve our metadata about this player from the TownController
+  connect(townController, token, socket);
+}
+
+function connect(townController: CoveyTownController, token: string, socket: Socket) {
   const session = townController.getSessionByToken(token);
   if (!session) {
     // No valid session exists for this token, hence this client's connection should be terminated
@@ -237,3 +242,4 @@ export function townSubscriptionHandler(socket: Socket): void {
     });
   }
 }
+
