@@ -119,16 +119,6 @@ export default class CoveyTownController {
     }
     return result;
   }
-  /**
-   * Destroys all data related to a player in this town.
-   *
-   * @param session PlayerSession to destroy
-   */
-  destroySession(session: PlayerSession): void {
-    this._players = this._players.filter(p => p.id !== session.player.id);
-    this._sessions = this._sessions.filter(s => s.sessionToken !== session.sessionToken);
-    this._listeners.forEach(listener => listener.onPlayerDisconnected(session.player));
-  }
 
   /**
    * Updates the location of a player within the town
@@ -194,7 +184,9 @@ export default class CoveyTownController {
 
   private onDisconnect(listener: CoveyTownListener, sessionToken: PlayerSession) {
     this.removeTownListener(listener);
-    this.destroySession(sessionToken);
+    this._players = this._players.filter(p => p.id !== sessionToken.player.id);
+    this._sessions = this._sessions.filter(s => s.sessionToken !== sessionToken.sessionToken);
+    this._listeners.forEach(listener => listener.onPlayerDisconnected(sessionToken.player));
   }
 }
 
