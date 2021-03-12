@@ -50,19 +50,19 @@ export default class CoveyTownsStore {
     return result;
   }
 
-  private static update(controller: CoveyTownController, coveyTownPassword: string, friendlyName: string | undefined, makePublic: boolean | undefined) {
+  private static update(this: CoveyTownController, coveyTownPassword: string, friendlyName: string | undefined, makePublic: boolean | undefined) {
     let result = false;
-    if (passwordMatches(coveyTownPassword, controller.townUpdatePassword)) {
+    if (passwordMatches(coveyTownPassword, this.townUpdatePassword)) {
       result = true;
       if (friendlyName !== undefined) {
         if (friendlyName.length === 0) {
           result = false;
         } else {
-          controller.friendlyName = friendlyName;
+          this.friendlyName = friendlyName;
         }
       }
       if (result && makePublic !== undefined) {
-        controller.isPubliclyListed = makePublic;
+        this.isPubliclyListed = makePublic;
       }
     }
     return result;
