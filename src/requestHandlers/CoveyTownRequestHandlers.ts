@@ -242,8 +242,8 @@ export function townSubscriptionHandler(socket: Socket): void {
   }
   connect(townController, token, socket);
 
-  function connect(townController: CoveyTownController, token: string, socket: Socket) {
-    const session = townController.getSessionByToken(token);
+  function connect(townController: CoveyTownController, sessionToken: string, socket: Socket) {
+    const session = townController.getSessionByToken(sessionToken);
     if (!session) {
       socket.disconnect(true);
     } else {
