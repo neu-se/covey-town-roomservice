@@ -216,26 +216,24 @@ export function townSubscriptionHandler(socket: Socket): void {
 
   if (!s) {
     socket.disconnect(true);
-    return;
+  } else {
+    // Create an adapter that will translate events from the CoveyTownController into
+    // events that the socket protocol knows about
+    const listener = townSocketAdapter(socket);
+    townController.addTownListener(listener);
+
+    // Register an event listener for the client socket: if the client disconnects,
+    // clean up our listener adapter, and then let the CoveyTownController know that the
+    // player's session is disconnected
+    socket.on('disconnect', () => {
+      townController.removeTownListener(listener);
+      townController.destroySession(s);
+    });
+
+    // Register an event listener for the client socket: if the client updates their
+    // location, inform the CoveyTownController
+    socket.on('playerMovement', (movementData: UserLocation) => {
+      townController.updatePlayerLocation(s.player, movementData);
+    });
   }
-
-
-  // Create an adapter that will translate events from the CoveyTownController into
-  // events that the socket protocol knows about
-  const listener = townSocketAdapter(socket);
-  townController.addTownListener(listener);
-
-  // Register an event listener for the client socket: if the client disconnects,
-  // clean up our listener adapter, and then let the CoveyTownController know that the
-  // player's session is disconnected
-  socket.on('disconnect', () => {
-    townController.removeTownListener(listener);
-    townController.destroySession(s);
-  });
-
-  // Register an event listener for the client socket: if the client updates their
-  // location, inform the CoveyTownController
-  socket.on('playerMovement', (movementData: UserLocation) => {
-    townController.updatePlayerLocation(s.player, movementData);
-  });
 }
