@@ -1,9 +1,12 @@
 import assert from 'assert';
 import { Socket } from 'socket.io';
+import { Session } from 'inspector';
 import Player from '../types/Player';
 import { CoveyTownList, UserLocation } from '../CoveyTypes';
 import CoveyTownListener from '../types/CoveyTownListener';
 import CoveyTownsStore from '../lib/CoveyTownsStore';
+import CoveyTownController from '../lib/CoveyTownController';
+import PlayerSession from '../types/PlayerSession';
 
 /**
  * The format of a request to join a Town in Covey.Town, as dispatched by the server middleware
@@ -209,22 +212,22 @@ function townSocketAdapter(socket: Socket): CoveyTownListener {
   };
 }
 
-function connect() {
+function connect(this: CoveyTownController, session: PlayerSession, socket: Socket) {
   const listener = townSocketAdapter(socket);
-  townController.addTownListener(listener);
+  this.addTownListener(listener);
 
   // Register an event listener for the client socket: if the client disconnects,
   // clean up our listener adapter, and then let the CoveyTownController know that the
   // player's session is disconnected
   socket.on('disconnect', () => {
-    townController.removeTownListener(listener);
-    townController.destroySession(session);
+    this.removeTownListener(listener);
+    this.destroySession(session);
   });
 
   // Register an event listener for the client socket: if the client updates their
   // location, inform the CoveyTownController
   socket.on('playerMovement', (movementData: UserLocation) => {
-    townController.updatePlayerLocation(session.player, movementData);
+    this.updatePlayerLocation(session.player, movementData);
   });
 }
 
@@ -236,7 +239,10 @@ function connect() {
 export function townSubscriptionHandler(socket: Socket): void {
   // Parse the client's session token from the connection
   // For each player, the session token should be the same string returned by joinTownHandler
-  const { token, coveyTownID } = socket.handshake.auth as { token: string; coveyTownID: string };
+  const { token: sessionToken, coveyTownID } = socket.handshake.auth as {
+    token: string;
+    coveyTownID: string;
+  };
 
   const townController = CoveyTownsStore.getInstance().getControllerForTown(coveyTownID);
 
@@ -245,10 +251,10 @@ export function townSubscriptionHandler(socket: Socket): void {
     socket.disconnect(true);
     return;
   }
-  const session = townController.getSessionByToken(token);
+  const session = townController.getSessionByToken(sessionToken);
   if (!session) {
     socket.disconnect(true);
   } else {
-    connect();
+    connect(townController, session, socket);
   }
 }
