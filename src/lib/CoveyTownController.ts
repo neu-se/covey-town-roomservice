@@ -5,6 +5,7 @@ import Player from '../types/Player';
 import PlayerSession from '../types/PlayerSession';
 import TwilioVideo from './TwilioVideo';
 import IVideoClient from './IVideoClient';
+import { passwordMatches } from './CoveyTownsStore';
 
 const friendlyNanoID = customAlphabet('1234567890ABCDEF', 8);
 
@@ -93,6 +94,23 @@ export default class CoveyTownController {
     return theSession;
   }
 
+  update(coveyTownPassword: string, friendlyName: string | undefined, makePublic: boolean | undefined) {
+    let result = false;
+    if (passwordMatches(coveyTownPassword, this.townUpdatePassword)) {
+      result = true;
+      if (friendlyName !== undefined) {
+        if (friendlyName.length === 0) {
+          result = false;
+        } else {
+          this.friendlyName = friendlyName;
+        }
+      }
+      if (result && makePublic !== undefined) {
+        this.isPubliclyListed = makePublic;
+      }
+    }
+    return result;
+  }
   /**
    * Destroys all data related to a player in this town.
    *

@@ -1,7 +1,7 @@
 import CoveyTownController from './CoveyTownController';
 import { CoveyTownList } from '../CoveyTypes';
 
-function passwordMatches(provided: string, expected: string): boolean {
+export function passwordMatches(provided: string, expected: string): boolean {
   if (provided === expected) {
     return true;
   }
@@ -46,27 +46,11 @@ export default class CoveyTownsStore {
   updateTown(coveyTownID: string, coveyTownPassword: string, friendlyName?: string, makePublic?: boolean): boolean {
     const existingTown = this.getControllerForTown(coveyTownID);
     if (!existingTown) return false;
-    let result = CoveyTownsStore.update(existingTown, coveyTownPassword, friendlyName, makePublic);
+    let result = existingTown.update(coveyTownPassword, friendlyName, makePublic);
     return result;
   }
 
-  private static update(this: CoveyTownController, coveyTownPassword: string, friendlyName: string | undefined, makePublic: boolean | undefined) {
-    let result = false;
-    if (passwordMatches(coveyTownPassword, this.townUpdatePassword)) {
-      result = true;
-      if (friendlyName !== undefined) {
-        if (friendlyName.length === 0) {
-          result = false;
-        } else {
-          this.friendlyName = friendlyName;
-        }
-      }
-      if (result && makePublic !== undefined) {
-        this.isPubliclyListed = makePublic;
-      }
-    }
-    return result;
-  }
+  
 
   deleteTown(coveyTownID: string, coveyTownPassword: string): boolean {
     const existingTown = this.getControllerForTown(coveyTownID);
